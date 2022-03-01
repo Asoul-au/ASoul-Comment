@@ -10,7 +10,7 @@ on:
 
 
 jobs:
-  build:
+  Update:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -23,18 +23,18 @@ jobs:
           python -m pip install -U pip
           python -m pip install -r requirements.txt
       - name: Update database
-        runs:
+        run: |
           python main.py --create
           python main.py --update
       - name: Add to git
-        run:
+        run: |
+          git config --local user.email "tiankaima@163.com"
+          git config --local user.name "ACTION FROM BOT"
           git add storage.db -f
-      - name: Push
-        uses: s0/git-publish-subdir-action@develop
-        env:
-          REPO: self
-          BRANCH: build
-          FOLDER: build
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MESSAGE: "Build with Github Actions: ({sha}) {msg}"
-        
+          git commit -m "Update database"
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          force: true
+          branch: build
