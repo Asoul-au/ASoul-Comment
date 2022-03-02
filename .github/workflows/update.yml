@@ -38,6 +38,7 @@ jobs:
           branch: build
   Sync:
     runs-on: ubuntu-latest
+    needs: Update
     steps:
       - name: executing remote ssh commands using password
         uses: appleboy/ssh-action@master
@@ -47,11 +48,12 @@ jobs:
           key: ${{ secrets.KEY }}
           port: ${{ secrets.PORT }}
           script: |
-            cd ~/ASoul-Comment
-            git fetch --all
-            git reset --hard origin/master
-            git pull
-            git checkout build
-            python -m pip install -U pip
-            python -m pip install -r requirements.txt
-            python main.py --run
+                    cd ~/ASoul-Comment
+                    git fetch --all
+                    git reset --hard origin/master
+                    git pull
+                    git checkout build
+                    python -m pip install -U pip
+                    python -m pip install -r requirements.txt
+                    nohup python -m uvicorn server:server &
+                    exit

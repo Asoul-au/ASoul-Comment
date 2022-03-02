@@ -1,5 +1,6 @@
 import logging
 import sqlite3
+from os import name
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,7 +26,10 @@ logging.basicConfig(level=logging.INFO,
 # database setup
 database = sqlite3.connect("storage.db", check_same_thread=False)
 database.enable_load_extension(True)
-database.load_extension("./distlib/distlib_64.dll")
+if name == "nt":
+    database.load_extension("./distlib/distlib_64.dll")
+else:
+    database.load_extension("./distlib/distlib_64.so")
 c = database.cursor()
 logging.info("storage.db loaded, start serving")
 
