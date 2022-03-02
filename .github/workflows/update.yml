@@ -1,10 +1,8 @@
 name: CI
 on:
   schedule:
-    - cron: "10 * * * *"
+    - cron: "30 * * * *"
   push:
-    branches: [ master ]
-  pull_request:
     branches: [ master ]
   workflow_dispatch:
 
@@ -38,3 +36,22 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           force: true
           branch: build
+  Sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: executing remote ssh commands using password
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          port: ${{ secrets.PORT }}
+          script: |
+            cd ~/ASoul-Comment
+            git fetch --all
+            git reset --hard origin/master
+            git pull
+            git checkout build
+            python -m pip install -U pip
+            python -m pip install -r requirements.txt
+            python main.py --run
