@@ -119,6 +119,9 @@ def createDataBase():
                  FANLEVEL INT,
                  CONTENT TEXT NOT NULL,
                  CONTENTTYPE INT);''')
+    c.execute('''CREATE TABLE DCOMMENTS
+                (ID INT PRIMARY KEY NOT NULL,
+                 CONTENT TEXT);''')
     logging.info("Comments table created")
     logging.info("Database created, testing...")
     c.execute("INSERT INTO VIDEOS (ID,AVID,TITLE,COVERIMG,VIEW,DATE)\
@@ -132,7 +135,6 @@ def createDataBase():
 
 
 def runServer():
-    logSetup()
     uvicorn.run(app="server:server", host="127.0.0.1", port=8080, reload=True)
 
 
@@ -224,6 +226,7 @@ if __name__ == "__main__":
             printHelpLine()
             sys.exit()
         elif opt in ('-c', '--create'):
+            logSetup()
             logging.info("create new database requested")
             createDataBase()
             sys.exit()
@@ -232,6 +235,7 @@ if __name__ == "__main__":
             runServer()
             sys.exit(2)
         elif opt in ('-u', "--update"):
+            logSetup()
             logging.info("update database requested")
             updateDataBase()
             sys.exit()
