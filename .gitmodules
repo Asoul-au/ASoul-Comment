@@ -1,3 +1,7 @@
 [submodule "distlib"]
 path = distlib
 url = git@github.com:schiffma/distlib.git
+
+[submodule "jieba"]
+path = jieba
+url = git@github.com:fxsjy/jieba.git
