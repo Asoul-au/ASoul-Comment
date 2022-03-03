@@ -3,18 +3,17 @@ import sqlite3
 from os import name
 
 from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
 
 commentReturnList = ['ID', 'AVID', 'USERNAME', 'USERID', 'DATE', 'LIKE', 'FANTYPE', 'FANLEVEL', 'CONTENT',
                      'CONTENTTYPE']
 videoReturnList = ['ID', 'AVID', 'TITLE', 'COVERIMG', 'VIEW', 'DATE']
-origins = [
-    "http://localhost",
-    "http://localhost:8080",
-    "http://localhost:3000",
-    "https://api.asoul-au.live",
-    "https://asoul-au.live",
-]
+# origins = [
+#     "http://localhost",
+#     "http://localhost:8080",
+#     "http://localhost:3000",
+#     "https://api.asoul-au.live",
+#     "https://asoul-au.live",
+# ]
 
 # Log settings:
 logging.basicConfig(level=logging.INFO,
@@ -35,13 +34,13 @@ logging.info("storage.db loaded, start serving")
 
 # server setup
 server = FastAPI()
-server.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=['*'],
-    allow_headers=['*'],
-)
+# server.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=origins,
+#     allow_credentials=True,
+#     allow_methods=['*'],
+#     allow_headers=['*'],
+# )
 logging.info("server started, working")
 
 
