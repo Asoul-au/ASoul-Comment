@@ -3,3 +3,12 @@ server.log
 storage.db
 identifier.sqlite
 /.idea
+/log
+go-cqhttp_windows_amd64.exe
+config.yml
+device.json
+qrcode.png
+/data
+/logs
+session.token
+config.py

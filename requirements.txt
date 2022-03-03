@@ -1,4 +1,4 @@
 uvicorn
 bilibili_api
 fastapi
-miraicle
+nonebot
