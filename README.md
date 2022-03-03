@@ -1,7 +1,7 @@
 # A-Soul Comment database
 
 ```text
-Please Notice that all copyright belongs to YUE HUA Entertainment,
+Please Notice that all copyright belongs to ByteDance Inc.,
 take care when dealing with the data you get/receive while using this repo. 
 ```
 

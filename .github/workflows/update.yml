@@ -22,6 +22,7 @@ jobs:
           python -m pip install -r requirements.txt
       - name: Update database
         run: |
+          mkdir log
           python main.py --create
           python main.py --update
       - name: Add to git
