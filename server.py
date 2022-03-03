@@ -7,17 +7,10 @@ from fastapi import FastAPI, Request
 commentReturnList = ['ID', 'AVID', 'USERNAME', 'USERID', 'DATE', 'LIKE', 'FANTYPE', 'FANLEVEL', 'CONTENT',
                      'CONTENTTYPE']
 videoReturnList = ['ID', 'AVID', 'TITLE', 'COVERIMG', 'VIEW', 'DATE']
-# origins = [
-#     "http://localhost",
-#     "http://localhost:8080",
-#     "http://localhost:3000",
-#     "https://api.asoul-au.live",
-#     "https://asoul-au.live",
-# ]
 
 # Log settings:
 logging.basicConfig(level=logging.INFO,
-                    filename="server.log",
+                    filename="log/server.log",
                     filemode="a",
                     format="%(asctime)s-%(name)s-%(levelname)-9s-%(filename)-8s:%(lineno)s line-%(message)s",
                     datefmt="%Y-%m-%d %H:%M:%S")
@@ -34,13 +27,6 @@ logging.info("storage.db loaded, start serving")
 
 # server setup
 server = FastAPI()
-# server.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=origins,
-#     allow_credentials=True,
-#     allow_methods=['*'],
-#     allow_headers=['*'],
-# )
 logging.info("server started, working")
 
 
@@ -88,5 +74,4 @@ def returnSearch(comment: str, full: bool, request: Request):
     else:
         tmp = [_res[0] for _res in res]
         logging.info(f"-&From IP:{request.client} Query on comment={id},result={tmp}")
-        return {"result": tmp}
-        pass
+        return tmp

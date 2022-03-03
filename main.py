@@ -14,7 +14,7 @@ from bilibili_api.comment import OrderType
 # logging module setup:
 def logSetup():
     logging.basicConfig(level=logging.INFO,
-                        filename="main.log",
+                        filename="log/main.log",
                         filemode="a",
                         format="%(asctime)s-%(name)s-%(levelname)-9s-%(filename)-8s@%(lineno)s: %(message)s",
                         datefmt="%Y-%m-%d %H:%M:%S")

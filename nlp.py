@@ -24,6 +24,7 @@ if __name__ == "__main__":
     c.execute("SELECT ID,CONTENT FROM COMMENTS WHERE length(CONTENT)>40")
     result = c.fetchall()
     for _result in result:
-        c.execute(f"INSERT INTO DCOMMENTS (ID,CONTENT)\
-                  VALUES (?,?)", (_result[0], filterComment(_result[1])))
+        if len(filterComment(_result[1])) > 60:
+            c.execute(f"INSERT INTO DCOMMENTS (ID)\
+                  VALUES ({_result[0]})")
     database.commit()
