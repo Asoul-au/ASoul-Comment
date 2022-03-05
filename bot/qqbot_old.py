@@ -1,3 +1,4 @@
+import re
 import sqlite3
 
 import nonebot
@@ -5,9 +6,15 @@ from nonebot import on_command, CommandSession
 
 import config
 
-database = sqlite3.connect("storage.db", check_same_thread=False)
+database = sqlite3.connect("../storage.db", check_same_thread=False)
 c = database.cursor()
 last = 0
+
+formatter = re.compile(r"回复 @.*? :")
+
+
+async def formatComment(input: str) -> str:
+    return formatter.sub("", input)
 
 
 def toUrl(avid: int):
@@ -27,8 +34,11 @@ async def test(session: CommandSession):
     result = c.fetchall()[0]
     print(result)
     last = result[0]
-    await session.send(
-        f"已查询到一篇小作文：\n作者：{result[2]} [{result[6]}]:[{result[7]}]\n发表于视频：{toUrl(result[1])}\n全文如下：\n\n{result[8]}")
+    tmp = await formatComment(result[8])
+    await session.bot.send_group_msg(
+        message=f"已查询到一篇小作文：\n作者：{result[2]} [{result[6]}]:[{result[7]}]\n发表于视频：{toUrl(result[1])}\n全文如下：\n\n{tmp}",
+        group_id=session.event.group_id)
+    # await session.send(f"已查询到一篇小作文：\n作者：{result[2]} [{result[6]}]:[{result[7]}]\n发表于视频：{toUrl(result[1])}\n全文如下：\n\n{result[8]}")
 
 
 @on_command('这不是小作文', only_to_me=False)

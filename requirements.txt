@@ -2,3 +2,4 @@ uvicorn
 bilibili_api
 fastapi
 nonebot
+qq-bot

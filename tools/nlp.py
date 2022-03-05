@@ -6,7 +6,7 @@ linkMatch = re.compile(
     r'((((ht|f)tp(s?))\://)?([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,6}(\:[0-9]+)*(/($|[a-zA-Z0-9\.\,\;\?\'\\\+&%\$#\=~_\-]+))*)')
 faceMatch = re.compile(r"[^\u4e00-\u9fa5a-zA-Z0-9\s:-@]+")
 
-database = sqlite3.connect("storage.db", check_same_thread=False)
+database = sqlite3.connect("../storage.db", check_same_thread=False)
 c = database.cursor()
 
 

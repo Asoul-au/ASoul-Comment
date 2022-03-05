@@ -10,13 +10,13 @@ videoReturnList = ['ID', 'AVID', 'TITLE', 'COVERIMG', 'VIEW', 'DATE']
 
 # Log settings:
 logging.basicConfig(level=logging.INFO,
-                    filename="log/server.log",
+                    filename="logs/server.log",
                     filemode="a",
                     format="%(asctime)s-%(name)s-%(levelname)-9s-%(filename)-8s:%(lineno)s line-%(message)s",
                     datefmt="%Y-%m-%d %H:%M:%S")
 
 # database setup
-database = sqlite3.connect("storage.db", check_same_thread=False)
+database = sqlite3.connect("../storage.db", check_same_thread=False)
 database.enable_load_extension(True)
 if name == "nt":
     database.load_extension("./distlib/distlib_64.dll")

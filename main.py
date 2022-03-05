@@ -13,8 +13,8 @@ from bilibili_api.comment import OrderType
 
 # logging module setup:
 def logSetup():
-    logging.basicConfig(level=logging.INFO,
-                        filename="log/main.log",
+    logging.basicConfig(level=logging.DEBUG,
+                        filename="logs/main.log",
                         filemode="a",
                         format="%(asctime)s-%(name)s-%(levelname)-9s-%(filename)-8s@%(lineno)s: %(message)s",
                         datefmt="%Y-%m-%d %H:%M:%S")
@@ -24,7 +24,7 @@ def logSetup():
 uids = [672328094, 672353429, 672346917, 672342685, 351609538]
 
 
-async def getComments(vid):
+async def getFullComments(vid):
     logging.info(f"trying to get comments from id={vid}")
     if vid == 233:
         # Test id, won't give out any response.
@@ -176,7 +176,7 @@ def updateDataBase():
     c.execute("SELECT AVID FROM VIDEOS")
     for _c in c:
         # Now _c[0] is a 'avid'.
-        tasklist.append(loop.create_task(getHotComments(_c[0])))
+        tasklist.append(loop.create_task(getFullComments(_c[0])))
     for task in tasklist:
         loop.run_until_complete(task)
         tmp = task.result()
@@ -212,11 +212,14 @@ def updateDataBase():
     logging.info("Up-to-date comments are synced up with database")
 
 
+def testRun():
+    await getFullComments(381826890)
+
 if __name__ == "__main__":
     # analyze the command line option:
     try:
-        options, args = getopt.getopt(args=sys.argv[1:], shortopts="hcru",
-                                      longopts=["help", "create", "run", "update"])
+        options, args = getopt.getopt(args=sys.argv[1:], shortopts="hcrut",
+                                      longopts=["help", "create", "run", "update", "test"])
     except getopt.GetoptError:
         print("[Err]:Wrong parameters found.")
         printHelpLine()
@@ -238,4 +241,9 @@ if __name__ == "__main__":
             logSetup()
             logging.info("update database requested")
             updateDataBase()
+            sys.exit()
+        elif opt in ('-t', "--test"):
+            logSetup()
+            logging.info("test requested")
+            testRun()
             sys.exit()
