@@ -1,4 +1,4 @@
-# A-Soul Comment database
+# A-Soul Comment Database
 
 ```text
 Please Notice that all copyright belongs to ByteDance Inc.,
