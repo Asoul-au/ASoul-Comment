@@ -9,7 +9,7 @@ take care when dealing with the data you get/receive while using this repo.
 
 ### React developer wanted!
 
-This repo is requesting react developer to join us `@Github/Asoul-au` origination.
+This repo is requesting react developer to join us `@Github/Asoul-au` organization.
 
 Currently, it's using `Typescript & React` to create a modern web page using `@microsoft/fluentui`
 
