@@ -7,7 +7,17 @@ from bilibili_api import comment
 from bilibili_api.user import User
 
 uids = [672328094, 672353429, 672346917, 672342685, 351609538]
-logging.basicConfig(level=logging.DEBUG, filename=".fetch.log", filemode="a",
+database = None
+cursor = None
+
+if __name__ == '__main__':
+    database_location = os.path.abspath(os.path.join("..", "storage.db"))
+    log_location = os.path.abspath(os.path.join("..", "logs", ".fetch.log"))
+else:
+    database_location = os.path.abspath("storage.db")
+    log_location = os.path.abspath(os.path.join("logs", ".fetch.log"))
+
+logging.basicConfig(level=logging.DEBUG, filename=log_location, filemode="a",
                     format="%(asctime)s-%(name)s-%(levelname)-9s-%(filename)-8s@%(lineno)s: %(message)s",
                     datefmt="%Y-%m-%d %H:%M:%S")
 
@@ -17,17 +27,19 @@ async def getFullCommentsFromDynamic(oid: int) -> list:
     page = 1
     commentCount = 0
     while True:
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.5)
         tmp = await comment.get_comments(oid, comment.ResourceType.DYNAMIC, page)
         for _tmp in tmp['replies']:
             _tmp['oid'] = oid
             for _stmp in _tmp['replies']:
                 _stmp['oid'] = oid
         comments.extend(tmp['replies'])
+        logging.info(f"getFullCommentsFromDynamic({oid}): page={page} fetched, +={len(tmp['replies'])}")
         commentCount += tmp['page']['size']
         page += 1
-        if commentCount >= tmp['page']['acount']:
+        if commentCount >= tmp['page']['acount'] or len(tmp['replies']) == 0:
             break
+    logging.info(f"getFullCommentsFromDynamic({oid}): Done.")
     return comments
 
 
@@ -36,17 +48,19 @@ async def getFullCommentsFromVideo(avid: int) -> list:
     page = 1
     commentCount = 0
     while True:
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.5)
         tmp = await comment.get_comments(avid, comment.ResourceType.VIDEO, page)
         for _tmp in tmp['replies']:
             _tmp['vid'] = avid
             for _stmp in _tmp['replies']:
                 _stmp['vid'] = avid
         comments.extend(tmp['replies'])
+        logging.info(f"getFullCommentsFromVideo({avid}): page={page} fetched, +={len(tmp['replies'])}")
         commentCount += tmp['page']['size']
         page += 1
-        if commentCount >= tmp['page']['acount']:
+        if commentCount >= tmp['page']['acount'] or len(tmp['replies']) == 0:
             break
+    logging.info(f"getFullCommentsFromVideo({avid}): Done.")
     return comments
 
 
@@ -54,12 +68,13 @@ async def getVideoList(_user: User) -> list:
     page = 1
     videos = []
     while True:
-        await asyncio.sleep(1)
-        tmp = await _user.get_videos(page)
+        await asyncio.sleep(0.5)
+        tmp = await _user.get_videos(pn=page)
         videos.extend(tmp['list']['vlist'])
         if page * 30 >= tmp['page']['count']:
             break
         page += 1
+    logging.info(f"getVideoList(uid={_user.uid}): Done")
     return videos
 
 
@@ -73,11 +88,12 @@ async def getDynamicList(_user: User) -> list:
         if page['has_more'] != 1:
             break
         offset = page['next_offset']
+    logging.info(f"getDynamicList(uid={_user.uid}): Done")
     return dynamics
 
 
 def createDatabase():
-    database_location = os.path.abspath(os.path.join("..", "storage.db"))
+    global database, cursor
     if os.path.exists(database_location):
         raise FileExistsError("storage.db already exists")
     database = sqlite3.connect(database_location)
@@ -88,7 +104,8 @@ def createDatabase():
                  TITLE TEXT,
                  COVERIMG TEXT,
                  VIEW INT,
-                 DATE INT);''')
+                 DATE INT,
+                 LAST_SEARCHED INT);''')
     cursor.execute('''CREATE TABLE COMMENTS
                 (ID INT PRIMARY KEY NOT NULL,
                  AVID INT NOT NULL,
@@ -104,23 +121,50 @@ def createDatabase():
                     (ID INT PRIMARY KEY NOT NULL,
                      OID INT NOT NULL,
                      CONTENT TEXT,
-                     DATE INT);''')
+                     DATE INT,
+                     LAST_SEARCHED INT);''')
     database.commit()
     cursor.close()
 
 
 def removeDatabase():
-    database_location = os.path.abspath(os.path.join("..", "storage.db"))
     if not os.path.exists(database_location):
         raise FileNotFoundError("storage.db don't exist")
     os.remove(database_location)
 
 
+def commitCommentToDatabase(comments: list):
+    global database, cursor
+    database = sqlite3.connect(database_location, check_same_thread=False)
+    cursor = database.cursor()
+    for _comment in comments:
+        if 'replies' in _comment and _comment['replies'] is not None:
+            commitCommentToDatabase(_comment['replies'])
+        cursor.execute(f"SELECT * FROM COMMENTS WHERE ID={_comment['rpid']}")
+        if len(cursor.fetchall()):
+            continue
+        else:
+            if not _comment['member']['fans_detail']:
+                cursor.execute(
+                    f"INSERT INTO COMMENTS (ID,AVID,USERNAME,USERID,DATE,LIKE,FAN_TYPE,FAN_LEVEL,CONTENT,CONTENTTYPE)\
+                 VALUES (?,?,?,?,?,?,?,?,?,?)", (
+                        _comment['rpid'], _comment['vid'], _comment['member']['uname'], _comment['member']['mid'],
+                        _comment['ctime'], _comment['like'], "None", 0, _comment['content']['message'], 0))
+            else:
+                cursor.execute(
+                    f"INSERT INTO COMMENTS (ID,AVID,USERNAME,USERID,DATE,LIKE,FAN_TYPE,FAN_LEVEL,CONTENT,CONTENTTYPE) \
+                VALUES (?,?,?,?,?,?,?,?,?,?)", (
+                        _comment['rpid'], _comment['vid'], _comment['member']['uname'], _comment['member']['mid'],
+                        _comment['ctime'], _comment['like'], _comment['member']['fans_detail']['medal_name'],
+                        _comment['member']['fans_detail']['level'], _comment['content']['message'], 0))
+    database.commit()
+
+
 def updateDatabase(full=False):
-    database_location = os.path.abspath(os.path.join("..", "storage.db"))
     if not os.path.exists(database_location):
         createDatabase()
-    database = sqlite3.connect(database_location)
+    global database, cursor
+    database = sqlite3.connect(database_location, check_same_thread=False)
     cursor = database.cursor()
 
     loop = asyncio.get_event_loop()
@@ -145,6 +189,7 @@ def updateDatabase(full=False):
             cursor.execute(f"INSERT INTO VIDEOS (ID,AVID,TITLE,COVERIMG,VIEW,DATE)\
                     VALUES (?,?,?,?,?,?)", (
                 video['created'], video['aid'], video['title'], video['pic'], video['play'], video['created']))
+    database.commit()
 
     for dynamic in dynamics:
         cursor.execute(f"SELECT * FROM DYNAMICS WHERE ID={dynamic['desc']['timestamp']}")
@@ -160,42 +205,26 @@ def updateDatabase(full=False):
             cursor.execute(f"INSERT INTO DYNAMICS (ID, OID, CONTENT, DATE)\
                             VALUES (?,?,?,?)", (
                 dynamic['desc']['timestamp'], dynamic['desc']['dynamic_id'], content, dynamic['desc']['timestamp']))
-
-    comments = []
+    database.commit()
 
     for video in videos:
-        if full or (video['created'] - time.time()) < 604800:
+        if full or (time.time() - video['created']) < 604800:
             tmp = loop.create_task(getFullCommentsFromVideo(video['aid']))
             loop.run_until_complete(tmp)
-            comments.extend(tmp.result())
+            commitCommentToDatabase(tmp.result())
+            cursor.execute(f"UPDATE VIDEOS SET LAST_SEARCHED={int(time.time())} WHERE ID={video['created']}")
+            database.commit()
 
     for dynamic in dynamics:
-        if full or (dynamic['desc']['timestamp'] - time.time()) < 604800:
+        if full or (time.time() - dynamic['desc']['timestamp']) < 604800:
             tmp = loop.create_task(getFullCommentsFromDynamic(dynamic['desc']['dynamic_id']))
             loop.run_until_complete(tmp)
-            comments.extend(tmp.result())
-
-    for _comment in comments:
-        cursor.execute(f"SELECT * FROM COMMENTS WHERE ID={_comment['rpid']}")
-        if len(cursor.fetchall()):
-            continue
-        else:
-            if not _comment['member']['fans_detail']:
-                cursor.execute(
-                    f"INSERT INTO COMMENTS (ID,AVID,USERNAME,USERID,DATE,LIKE,FAN_TYPE,FAN_LEVEL,CONTENT,CONTENTTYPE)\
-                 VALUES (?,?,?,?,?,?,?,?,?,?)", (
-                        _comment['rpid'], _comment['vid'], _comment['member']['uname'], _comment['member']['mid'],
-                        _comment['ctime'], _comment['like'], "None", 0, _comment['content']['message'], 0))
-            else:
-                cursor.execute(
-                    f"INSERT INTO COMMENTS (ID,AVID,USERNAME,USERID,DATE,LIKE,FAN_TYPE,FAN_LEVEL,CONTENT,CONTENTTYPE) \
-                VALUES (?,?,?,?,?,?,?,?,?,?)", (
-                        _comment['rpid'], _comment['vid'], _comment['member']['uname'], _comment['member']['mid'],
-                        _comment['ctime'], _comment['like'], _comment['member']['fans_detail']['medal_name'],
-                        _comment['member']['fans_detail']['level'], _comment['content']['message'], 0))
-    database.commit()
+            commitCommentToDatabase(tmp.result())
+            cursor.execute(
+                f"UPDATE VIDEOS SET LAST_SEARCHED={int(time.time())} WHERE ID={dynamic['desc']['timestamp']}")
+            database.commit()
 
 
 if __name__ == "__main__":
     removeDatabase()
-    updateDatabase(full=True)
+    updateDatabase(full=False)

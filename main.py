@@ -3,14 +3,6 @@ import sys
 from tools.fetch import *
 
 
-def logSetup():
-    logging.basicConfig(level=logging.DEBUG,
-                        filename=".main.log",
-                        filemode="a",
-                        format="%(asctime)s-%(name)s-%(levelname)-9s-%(filename)-8s@%(lineno)s: %(message)s",
-                        datefmt="%Y-%m-%d %H:%M:%S")
-
-
 if __name__ == "__main__":
     try:
         options, args = getopt.getopt(args=sys.argv[1:], shortopts="hfrut",
