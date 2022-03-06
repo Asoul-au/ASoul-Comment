@@ -1,15 +1,9 @@
-main.log
-server.log
-#storage.db
-bot/identifier.sqlite
 /.idea
 /log
 bot/go-cqhttp_windows_amd64.exe
 bot/config.yml
 bot/device.json
-qrcode.png
-/bot/data
-/logs
+bot/data
 bot/session.token
 bot/config.py
 bot/qqbot.log

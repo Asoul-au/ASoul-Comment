@@ -1,13 +1,10 @@
 import asyncio
-import getopt
 import logging
 import os.path
 import sqlite3
-import sys
-import uvicorn
+import time
 from bilibili_api import comment
 from bilibili_api.user import User
-from bilibili_api.comment import OrderType
 
 uids = [672328094, 672353429, 672346917, 672342685, 351609538]
 logging.basicConfig(level=logging.DEBUG, filename=".fetch.log", filemode="a",
@@ -119,7 +116,7 @@ def removeDatabase():
     os.remove(database_location)
 
 
-def updateDatabaseFull():
+def updateDatabase(full=False):
     database_location = os.path.abspath(os.path.join("..", "storage.db"))
     if not os.path.exists(database_location):
         createDatabase()
@@ -151,7 +148,7 @@ def updateDatabaseFull():
 
     for dynamic in dynamics:
         cursor.execute(f"SELECT * FROM DYNAMICS WHERE ID={dynamic['desc']['timestamp']}")
-        if (len(cursor.fetchall())):
+        if len(cursor.fetchall()):
             continue
         else:
             if 'title' in dynamic['card']:
@@ -166,21 +163,39 @@ def updateDatabaseFull():
 
     comments = []
 
-    for video in videos[1:2]:
-        tmp = loop.create_task(getFullCommentsFromVideo(video['aid']))
-        loop.run_until_complete(tmp)
-        comments.extend(tmp.result())
+    for video in videos:
+        if full or (video['created'] - time.time()) < 604800:
+            tmp = loop.create_task(getFullCommentsFromVideo(video['aid']))
+            loop.run_until_complete(tmp)
+            comments.extend(tmp.result())
 
-    for dynamic in dynamics[1:2]:
-        tmp = loop.create_task(getFullCommentsFromDynamic(dynamic['desc']['dynamic_id']))
-        loop.run_until_complete(tmp)
-        comments.extend(tmp.result())
-    pass
+    for dynamic in dynamics:
+        if full or (dynamic['desc']['timestamp'] - time.time()) < 604800:
+            tmp = loop.create_task(getFullCommentsFromDynamic(dynamic['desc']['dynamic_id']))
+            loop.run_until_complete(tmp)
+            comments.extend(tmp.result())
+
+    for _comment in comments:
+        cursor.execute(f"SELECT * FROM COMMENTS WHERE ID={_comment['rpid']}")
+        if len(cursor.fetchall()):
+            continue
+        else:
+            if not _comment['member']['fans_detail']:
+                cursor.execute(
+                    f"INSERT INTO COMMENTS (ID,AVID,USERNAME,USERID,DATE,LIKE,FAN_TYPE,FAN_LEVEL,CONTENT,CONTENTTYPE)\
+                 VALUES (?,?,?,?,?,?,?,?,?,?)", (
+                        _comment['rpid'], _comment['vid'], _comment['member']['uname'], _comment['member']['mid'],
+                        _comment['ctime'], _comment['like'], "None", 0, _comment['content']['message'], 0))
+            else:
+                cursor.execute(
+                    f"INSERT INTO COMMENTS (ID,AVID,USERNAME,USERID,DATE,LIKE,FAN_TYPE,FAN_LEVEL,CONTENT,CONTENTTYPE) \
+                VALUES (?,?,?,?,?,?,?,?,?,?)", (
+                        _comment['rpid'], _comment['vid'], _comment['member']['uname'], _comment['member']['mid'],
+                        _comment['ctime'], _comment['like'], _comment['member']['fans_detail']['medal_name'],
+                        _comment['member']['fans_detail']['level'], _comment['content']['message'], 0))
+    database.commit()
 
 
 if __name__ == "__main__":
-    # loop = asyncio.get_event_loop()
-    # t = loop.create_task(getDynamicList(User(uids[0])))
-    # loop.run_until_complete(t)
-    # print(t.result())
-    updateDatabaseFull()
+    removeDatabase()
+    updateDatabase(full=True)

@@ -1,7 +1,7 @@
 name: CI
 on:
   schedule:
-    - cron: "30 * * * *"
+    - cron: "15 * * * *"
   push:
     branches: [ master ]
   workflow_dispatch:
@@ -22,14 +22,13 @@ jobs:
           python -m pip install -r requirements.txt
       - name: Update database
         run: |
-          mkdir log
-          python main.py --create
+          python main.py --fetch
           python main.py --update
       - name: Add to git
         run: |
           git config --local user.email "tiankaima@163.com"
           git config --local user.name "ACTION FROM BOT"
-          git add storage.db -f
+          git add storage.db
           git commit -m "Update database"
       - name: Push changes
         uses: ad-m/github-push-action@master
