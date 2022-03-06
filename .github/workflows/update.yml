@@ -22,8 +22,8 @@ jobs:
           python -m pip install -r requirements.txt
       - name: Update database
         run: |
-          python main.py --fetch
-          python main.py --update
+          mkdir logs
+          python main.py --update-all
       - name: Add to git
         run: |
           git config --local user.email "tiankaima@163.com"
