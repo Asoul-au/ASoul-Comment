@@ -23,45 +23,53 @@ logging.basicConfig(level=logging.DEBUG, filename=log_location, filemode="a",
 
 
 async def getFullCommentsFromDynamic(oid: int) -> list:
-    comments = []
-    page = 1
-    commentCount = 0
-    while True:
-        await asyncio.sleep(0.5)
-        tmp = await comment.get_comments(oid, comment.ResourceType.DYNAMIC, page)
-        for _tmp in tmp['replies']:
-            _tmp['oid'] = oid
-            for _stmp in _tmp['replies']:
-                _stmp['oid'] = oid
-        comments.extend(tmp['replies'])
-        logging.info(f"getFullCommentsFromDynamic({oid}): page={page} fetched, +={len(tmp['replies'])}")
-        commentCount += tmp['page']['size']
-        page += 1
-        if commentCount >= tmp['page']['acount'] or len(tmp['replies']) == 0:
-            break
-    logging.info(f"getFullCommentsFromDynamic({oid}): Done.")
-    return comments
+    try:
+        comments = []
+        page = 1
+        commentCount = 0
+        while True:
+            await asyncio.sleep(0.5)
+            tmp = await comment.get_comments(oid, comment.ResourceType.DYNAMIC, page)
+            for _tmp in tmp['replies']:
+                _tmp['oid'] = oid
+                for _stmp in _tmp['replies']:
+                    _stmp['oid'] = oid
+            comments.extend(tmp['replies'])
+            logging.info(f"getFullCommentsFromDynamic({oid}): page={page} fetched, +={len(tmp['replies'])}")
+            commentCount += tmp['page']['size']
+            page += 1
+            if commentCount >= tmp['page']['acount'] or len(tmp['replies']) == 0:
+                break
+        logging.info(f"getFullCommentsFromDynamic({oid}): Done.")
+        return comments
+    except BaseException:
+        logging.error(f"getFullCommentsFromDynamic({oid}): Error.")
+        return []
 
 
 async def getFullCommentsFromVideo(avid: int) -> list:
-    comments = []
-    page = 1
-    commentCount = 0
-    while True:
-        await asyncio.sleep(0.5)
-        tmp = await comment.get_comments(avid, comment.ResourceType.VIDEO, page)
-        for _tmp in tmp['replies']:
-            _tmp['vid'] = avid
-            for _stmp in _tmp['replies']:
-                _stmp['vid'] = avid
-        comments.extend(tmp['replies'])
-        logging.info(f"getFullCommentsFromVideo({avid}): page={page} fetched, +={len(tmp['replies'])}")
-        commentCount += tmp['page']['size']
-        page += 1
-        if commentCount >= tmp['page']['acount'] or len(tmp['replies']) == 0:
-            break
-    logging.info(f"getFullCommentsFromVideo({avid}): Done.")
-    return comments
+    try:
+        comments = []
+        page = 1
+        commentCount = 0
+        while True:
+            await asyncio.sleep(0.5)
+            tmp = await comment.get_comments(avid, comment.ResourceType.VIDEO, page)
+            for _tmp in tmp['replies']:
+                _tmp['vid'] = avid
+                for _stmp in _tmp['replies']:
+                    _stmp['vid'] = avid
+            comments.extend(tmp['replies'])
+            logging.info(f"getFullCommentsFromVideo({avid}): page={page} fetched, +={len(tmp['replies'])}")
+            commentCount += tmp['page']['size']
+            page += 1
+            if commentCount >= tmp['page']['acount'] or len(tmp['replies']) == 0:
+                break
+        logging.info(f"getFullCommentsFromVideo({avid}): Done.")
+        return comments
+    except BaseException:
+        logging.error(f"getFullCommentsFromVideo({avid}): Done.")
+        return []
 
 
 async def getVideoList(_user: User) -> list:
@@ -143,7 +151,7 @@ def commitCommentToDatabase(comments: list):
         cursor.execute(f"SELECT * FROM COMMENTS WHERE ID={_comment['rpid']}")
         if len(cursor.fetchall()):
             continue
-        else:
+        elif 'vid' in _comment:
             if not _comment['member']['fans_detail']:
                 cursor.execute(
                     f"INSERT INTO COMMENTS (ID,AVID,USERNAME,USERID,DATE,LIKE,FAN_TYPE,FAN_LEVEL,CONTENT,CONTENTTYPE)\
@@ -157,6 +165,20 @@ def commitCommentToDatabase(comments: list):
                         _comment['rpid'], _comment['vid'], _comment['member']['uname'], _comment['member']['mid'],
                         _comment['ctime'], _comment['like'], _comment['member']['fans_detail']['medal_name'],
                         _comment['member']['fans_detail']['level'], _comment['content']['message'], 0))
+        else:
+            if not _comment['member']['fans_detail']:
+                cursor.execute(
+                    f"INSERT INTO COMMENTS (ID,AVID,USERNAME,USERID,DATE,LIKE,FAN_TYPE,FAN_LEVEL,CONTENT,CONTENTTYPE)\
+                 VALUES (?,?,?,?,?,?,?,?,?,?)", (
+                        _comment['rpid'], _comment['oid'], _comment['member']['uname'], _comment['member']['mid'],
+                        _comment['ctime'], _comment['like'], "None", 0, _comment['content']['message'], 1))
+            else:
+                cursor.execute(
+                    f"INSERT INTO COMMENTS (ID,AVID,USERNAME,USERID,DATE,LIKE,FAN_TYPE,FAN_LEVEL,CONTENT,CONTENTTYPE) \
+                VALUES (?,?,?,?,?,?,?,?,?,?)", (
+                        _comment['rpid'], _comment['oid'], _comment['member']['uname'], _comment['member']['mid'],
+                        _comment['ctime'], _comment['like'], _comment['member']['fans_detail']['medal_name'],
+                        _comment['member']['fans_detail']['level'], _comment['content']['message'], 1))
     database.commit()
 
 
@@ -209,6 +231,9 @@ def updateDatabase(full=False):
 
     for video in videos:
         if full or (time.time() - video['created']) < 604800:
+            cursor.execute(f"SELECT * FROM VIDEOS WHERE ID={video['created']}")
+            if cursor.fetchall()[0][6] is not None:
+                continue
             tmp = loop.create_task(getFullCommentsFromVideo(video['aid']))
             loop.run_until_complete(tmp)
             commitCommentToDatabase(tmp.result())
@@ -217,14 +242,16 @@ def updateDatabase(full=False):
 
     for dynamic in dynamics:
         if full or (time.time() - dynamic['desc']['timestamp']) < 604800:
+            cursor.execute(f"SELECT * FROM DYNAMICS WHERE ID={dynamic['desc']['timestamp']}")
+            if cursor.fetchall()[0][4] is not None:
+                continue
             tmp = loop.create_task(getFullCommentsFromDynamic(dynamic['desc']['dynamic_id']))
             loop.run_until_complete(tmp)
             commitCommentToDatabase(tmp.result())
             cursor.execute(
-                f"UPDATE VIDEOS SET LAST_SEARCHED={int(time.time())} WHERE ID={dynamic['desc']['timestamp']}")
+                f"UPDATE DYNAMICS SET LAST_SEARCHED={int(time.time())} WHERE ID={dynamic['desc']['timestamp']}")
             database.commit()
 
 
 if __name__ == "__main__":
-    removeDatabase()
-    updateDatabase(full=False)
+    updateDatabase(full=True)
