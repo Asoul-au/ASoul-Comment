@@ -23,12 +23,12 @@ logging.basicConfig(level=logging.DEBUG, filename=log_location, filemode="a",
 
 
 async def getFullCommentsFromDynamic(oid: int) -> list:
-    try:
-        comments = []
-        page = 1
-        commentCount = 0
-        while True:
-            await asyncio.sleep(0.5)
+    comments = []
+    page = 1
+    commentCount = 0
+    while True:
+        await asyncio.sleep(0.5)
+        try:
             tmp = await comment.get_comments(oid, comment.ResourceType.DYNAMIC, page)
             for _tmp in tmp['replies']:
                 _tmp['oid'] = oid
@@ -40,20 +40,19 @@ async def getFullCommentsFromDynamic(oid: int) -> list:
             page += 1
             if commentCount >= tmp['page']['acount'] or len(tmp['replies']) == 0:
                 break
-        logging.info(f"getFullCommentsFromDynamic({oid}): Done.")
-        return comments
-    except BaseException:
-        logging.error(f"getFullCommentsFromDynamic({oid}): Error.")
-        return []
+        except BaseException:
+            logging.error(f"getFullCommentsFromDynamic({oid}): page={page} Error.")
+    logging.info(f"getFullCommentsFromDynamic({oid}): Done.")
+    return comments
 
 
 async def getFullCommentsFromVideo(avid: int) -> list:
-    try:
-        comments = []
-        page = 1
-        commentCount = 0
-        while True:
-            await asyncio.sleep(0.5)
+    comments = []
+    page = 1
+    commentCount = 0
+    while True:
+        await asyncio.sleep(0.5)
+        try:
             tmp = await comment.get_comments(avid, comment.ResourceType.VIDEO, page)
             for _tmp in tmp['replies']:
                 _tmp['vid'] = avid
@@ -65,12 +64,10 @@ async def getFullCommentsFromVideo(avid: int) -> list:
             page += 1
             if commentCount >= tmp['page']['acount'] or len(tmp['replies']) == 0:
                 break
-        logging.info(f"getFullCommentsFromVideo({avid}): Done.")
-        return comments
-    except BaseException:
-        logging.error(f"getFullCommentsFromVideo({avid}): Done.")
-        return []
-
+        except BaseException:
+            logging.error(f"getFullCommentsFromVideo({avid}): Done.")
+    logging.info(f"getFullCommentsFromVideo({avid}): Done.")
+    return comments
 
 async def getVideoList(_user: User) -> list:
     page = 1
