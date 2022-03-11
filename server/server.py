@@ -78,30 +78,30 @@ async def returnComment(request: Request, cid: int = None, uid: int = None):
 
 
 @server.get('/video')
-def returnVideo(avid: int, request: Request):
+def returnVideo(id: int, request: Request):
     global cursor
-    if avid == 233:
+    if id == 233:
         cursor.execute(f"SELECT * FROM VIDEOS ORDER BY random() LIMIT 1")
     else:
-        cursor.execute(f"SELECT * FROM VIDEOS WHERE ID={avid}")
+        cursor.execute(f"SELECT * FROM VIDEOS WHERE ID={id}")
     tmp = cursor.fetchall()[0]
     if tmp:
-        logging.info(f"From:{request.client} | Query on comment id={avid}")
+        logging.info(f"From:{request.client} | Query on comment id={id}")
         return zip(videoReturnList, tmp)
     else:
-        return {'message': f'id={avid} not found'}
+        return {'message': f'id={id} not found'}
 
 
 @server.get('/dynamics')
-async def returnVideo(oid: int, request: Request):
+async def returnVideo(id: int, request: Request):
     global cursor
-    if oid == 233:
-        cursor.execute(f"SELECT * FROM DYNAMICS WHERE ID={oid}")
+    if id == 233:
+        cursor.execute(f"SELECT * FROM DYNAMICS WHERE ID={id}")
     else:
         cursor.execute(f"SELECT * FROM DYNAMICS ORDER BY random() LIMIT 1")
     tmp = cursor.fetchall()[0]
     if tmp:
-        logging.info(f"From:{request.client} | Query on comment id={oid}")
+        logging.info(f"From:{request.client} | Query on comment id={id}")
         return zip(dynamicsReturnList, tmp)
     else:
-        return {'message': f'id={oid} not found'}
+        return {'message': f'id={id} not found'}

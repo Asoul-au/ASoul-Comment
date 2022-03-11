@@ -17,10 +17,14 @@ if __name__ == "__main__":
             sys.exit()
         elif opt in ('-f', '--fetch'):
             createDatabase()
+            # TODO: Progress bar!
+            # TODO: This would require a updated structure for storing more information.
+            # TODO: So that means we should also create a `update` script for updating from different versions.
             updateDatabase(True)
         elif opt in ('-u', '--update'):
             updateDatabase(False)
         elif opt in '--update-all':
             updateDatabase(True)
         elif opt in '--start-server':
+            # TODO: customization options like ip or port.
             startServer()
