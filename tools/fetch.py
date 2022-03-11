@@ -3,7 +3,9 @@ import logging
 import os.path
 import sqlite3
 import time
+
 from bilibili_api import comment
+from bilibili_api.comment import OrderType
 from bilibili_api.user import User
 
 uids = [672328094, 672353429, 672346917, 672342685, 351609538]
@@ -12,10 +14,10 @@ cursor = None
 
 if __name__ == '__main__':
     database_location = os.path.abspath(os.path.join("..", "storage.db"))
-    log_location = os.path.abspath(os.path.join("..", "logs", ".fetch.log"))
+    log_location = os.path.abspath(os.path.join("..", "logs", "fetch.log"))
 else:
     database_location = os.path.abspath("storage.db")
-    log_location = os.path.abspath(os.path.join("logs", ".fetch.log"))
+    log_location = os.path.abspath(os.path.join("logs", "fetch.log"))
 
 logging.basicConfig(level=logging.DEBUG, filename=log_location, filemode="a",
                     format="%(asctime)s-%(name)s-%(levelname)-9s-%(filename)-8s@%(lineno)s: %(message)s",
@@ -29,7 +31,7 @@ async def getFullCommentsFromDynamic(oid: int) -> list:
     while True:
         await asyncio.sleep(0.5)
         try:
-            tmp = await comment.get_comments(oid, comment.ResourceType.DYNAMIC, page)
+            tmp = await comment.get_comments(oid, comment.ResourceType.DYNAMIC, page, order=OrderType.LIKE)
             for _tmp in tmp['replies']:
                 _tmp['oid'] = oid
                 for _stmp in _tmp['replies']:
@@ -42,6 +44,7 @@ async def getFullCommentsFromDynamic(oid: int) -> list:
                 break
         except BaseException:
             logging.error(f"getFullCommentsFromDynamic({oid}): page={page} Error.")
+            return []
     logging.info(f"getFullCommentsFromDynamic({oid}): Done.")
     return comments
 
@@ -53,7 +56,7 @@ async def getFullCommentsFromVideo(avid: int) -> list:
     while True:
         await asyncio.sleep(0.5)
         try:
-            tmp = await comment.get_comments(avid, comment.ResourceType.VIDEO, page)
+            tmp = await comment.get_comments(avid, comment.ResourceType.VIDEO, page, order=OrderType.LIKE)
             for _tmp in tmp['replies']:
                 _tmp['vid'] = avid
                 for _stmp in _tmp['replies']:
@@ -65,9 +68,11 @@ async def getFullCommentsFromVideo(avid: int) -> list:
             if commentCount >= tmp['page']['acount'] or len(tmp['replies']) == 0:
                 break
         except BaseException:
-            logging.error(f"getFullCommentsFromVideo({avid}): Done.")
+            logging.error(f"getFullCommentsFromVideo({avid}): page={page} Error.")
+            return []
     logging.info(f"getFullCommentsFromVideo({avid}): Done.")
     return comments
+
 
 async def getVideoList(_user: User) -> list:
     page = 1
@@ -233,9 +238,10 @@ def updateDatabase(full=False):
                 continue
             tmp = loop.create_task(getFullCommentsFromVideo(video['aid']))
             loop.run_until_complete(tmp)
-            commitCommentToDatabase(tmp.result())
-            cursor.execute(f"UPDATE VIDEOS SET LAST_SEARCHED={int(time.time())} WHERE ID={video['created']}")
-            database.commit()
+            if tmp.result() is not []:
+                commitCommentToDatabase(tmp.result())
+                cursor.execute(f"UPDATE VIDEOS SET LAST_SEARCHED={int(time.time())} WHERE ID={video['created']}")
+                database.commit()
 
     for dynamic in dynamics:
         if full or (time.time() - dynamic['desc']['timestamp']) < 604800:
@@ -244,10 +250,11 @@ def updateDatabase(full=False):
                 continue
             tmp = loop.create_task(getFullCommentsFromDynamic(dynamic['desc']['dynamic_id']))
             loop.run_until_complete(tmp)
-            commitCommentToDatabase(tmp.result())
-            cursor.execute(
-                f"UPDATE DYNAMICS SET LAST_SEARCHED={int(time.time())} WHERE ID={dynamic['desc']['timestamp']}")
-            database.commit()
+            if tmp.result() is not []:
+                commitCommentToDatabase(tmp.result())
+                cursor.execute(
+                    f"UPDATE DYNAMICS SET LAST_SEARCHED={int(time.time())} WHERE ID={dynamic['desc']['timestamp']}")
+                database.commit()
 
 
 if __name__ == "__main__":
